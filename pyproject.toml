@@ -1,0 +1,29 @@
+[project]
+name = "uzcy"
+version = "0.1.0"
+description = "Reverse include dependency tracker for C/C++ (used_by blocks)."
+readme = "README.md"
+requires-python = ">=3.12"
+authors = [{ name = "Adam Twardoch" }]
+license = { text = "MIT" }
+dependencies = [
+  "fire>=0.6.0",
+  "loguru>=0.7.2",
+  "pydantic>=2.7.0",
+  "rich>=13.7.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.2.0",
+  "ruff>=0.5.0",
+]
+
+[project.scripts]
+uzcy = "uzcy.cli:main"
+
+[tool.ruff]
+line-length = 100
+
+[tool.pytest.ini_options]
+addopts = "-xvs"
