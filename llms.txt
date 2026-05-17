@@ -1,0 +1,847 @@
+<documents><toc>
+📁 uzcy
+├── 📁 examples
+│   ├── 📁 simple
+│   │   ├── 📄 a.h
+│   │   ├── 📄 b.c
+│   │   └── 📄 c.cpp
+│   └── 📁 simple_expected
+│       ├── 📄 a.h
+│       ├── 📄 b.c
+│       └── 📄 c.cpp
+├── 📁 src
+│   ├── 📁 uzcy
+│   │   ├── 📄 __init__.py
+│   │   ├── 📄 clang_backend.py
+│   │   ├── 📄 cli.py
+│   │   ├── 📄 config.py
+│   │   ├── 📄 discovery.py
+│   │   ├── 📄 maps.py
+│   │   ├── 📄 paths.py
+│   │   ├── 📄 text_scan.py
+│   │   └── 📄 writer.py
+│   └── 📁 uzcy.egg-info
+│       ├── 📄 dependency_links.txt
+│       ├── 📄 entry_points.txt
+│       ├── 📄 PKG-INFO
+│       ├── 📄 requires.txt
+│       ├── 📄 SOURCES.txt
+│       └── 📄 top_level.txt
+├── 📁 tests
+│   ├── 📄 conftest.py
+│   ├── 📄 test_clang_backend.py
+│   ├── 📄 test_cli.py
+│   ├── 📄 test_config.py
+│   ├── 📄 test_discovery.py
+│   ├── 📄 test_maps.py
+│   ├── 📄 test_paths.py
+│   ├── 📄 test_text_scan.py
+│   └── 📄 test_writer.py
+├── 📄 .gitignore
+├── 📄 DEPENDENCIES.md
+├── 📄 pyproject.toml
+├── 📄 README.md
+└── 📄 test.sh
+
+
+</toc>
+<document index="1">
+<source>.gitignore</source>
+<document_content>
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+</document_content>
+</document>
+
+<document index="2">
+<source>DEPENDENCIES.md</source>
+<document_content>
+# Dependencies
+
+## Runtime
+
+- `fire`: minimal CLI wiring.
+- `rich`: readable console output.
+- `loguru`: simple logging with `--verbose` toggle.
+- `pydantic`: config validation with clear errors.
+
+## Dev
+
+- `pytest`: tests.
+- `ruff`: lint + format.
+
+## External tools
+
+- `clang-scan-deps` (optional): accurate include graph when `compile_commands.json` is present.
+
+## Decision notes
+
+- Prefer `clang-scan-deps` for accuracy when a compile database exists; fall back to text scanning to keep the tool usable without it.
+</document_content>
+</document>
+
+<document index="3">
+<source>README.md</source>
+<document_content>
+# uzcy
+
+Reverse include dependency tracker for C/C++ that maintains `// <used_by>` blocks.
+
+## Definition
+
+A file is listed under `used_by` when it **directly includes** the file (no transitive analysis).
+
+## Requirements
+
+- Python 3.12+
+- Optional: `clang-scan-deps` for the clang backend (recommended when `compile_commands.json` exists)
+
+## Install (dev)
+
+```bash
+cd uzcy
+uv venv
+source .venv/bin/activate
+uv pip install -e .
+```
+
+## Usage
+
+```bash
+uzcy run --path .
+```
+
+Key flags:
+
+- `--mode auto|clang|text` (default: auto)
+- `--compile-db path/to/compile_commands.json`
+- `--exclude ".git,build,out"` (empty string disables excludes)
+- `--dry-run`
+- `--backup path/to/backup`
+- `--verbose`
+
+## Output format
+
+```
+// <used_by>
+// - path/to/user.cpp
+// - path/to/user.h
+// </used_by>
+```
+
+## Notes
+
+- In `auto` mode, `clang-scan-deps` is used when a compile database is found; otherwise it falls back to a text scan.
+- The text scanner ignores commented `#include` lines and skips ambiguous includes when multiple files match.
+</document_content>
+</document>
+
+<document index="4">
+<source>examples/simple/a.h</source>
+<document_content>
+#ifndef A_H
+#define A_H
+
+int a();
+
+#endif
+</document_content>
+</document>
+
+<document index="5">
+<source>examples/simple/b.c</source>
+<document_content>
+#include "a.h"
+
+int main() {
+    return a();
+}
+</document_content>
+</document>
+
+# File: /Users/adam/Developer/vcs3/github.twardoch/pub/uz/uzcy/examples/simple/c.cpp
+# Language: cpp
+
+#include #include "a.h"
+
+
+<document index="6">
+<source>examples/simple_expected/a.h</source>
+<document_content>
+// <used_by>
+// - b.c
+// - c.cpp
+// </used_by>
+
+#ifndef A_H
+#define A_H
+
+int a();
+
+#endif
+</document_content>
+</document>
+
+<document index="7">
+<source>examples/simple_expected/b.c</source>
+<document_content>
+#include "a.h"
+
+int main() {
+    return a();
+}
+</document_content>
+</document>
+
+# File: /Users/adam/Developer/vcs3/github.twardoch/pub/uz/uzcy/examples/simple_expected/c.cpp
+# Language: cpp
+
+#include #include "a.h"
+
+
+<document index="8">
+<source>pyproject.toml</source>
+<document_content>
+[project]
+name = "uzcy"
+version = "0.1.0"
+description = "Reverse include dependency tracker for C/C++ (used_by blocks)."
+readme = "README.md"
+requires-python = ">=3.12"
+authors = [{ name = "Adam Twardoch" }]
+license = { text = "MIT" }
+dependencies = [
+  "fire>=0.6.0",
+  "loguru>=0.7.2",
+  "pydantic>=2.7.0",
+  "rich>=13.7.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.2.0",
+  "ruff>=0.5.0",
+]
+
+[project.scripts]
+uzcy = "uzcy.cli:main"
+
+[tool.ruff]
+line-length = 100
+
+[tool.pytest.ini_options]
+addopts = "-xvs"
+</document_content>
+</document>
+
+# File: /Users/adam/Developer/vcs3/github.twardoch/pub/uz/uzcy/src/uzcy/__init__.py
+# Language: python
+
+
+
+# File: /Users/adam/Developer/vcs3/github.twardoch/pub/uz/uzcy/src/uzcy/clang_backend.py
+# Language: python
+
+import json
+import shutil
+import subprocess
+from pathlib import Path
+
+def find_compile_db((root: Path)) -> Path | None:
+
+def _ensure_clang_scan_deps(()) -> str:
+
+def run_clang_scan_deps((compile_db: Path)) -> str:
+
+def _decode_json_stream((raw: str)) -> list[object]:
+
+def _load_json((raw: str)) -> object:
+
+def _normalize_entries((data: object)) -> list[dict[str, object]]:
+
+def _extract_paths((values: object)) -> list[str]:
+
+def _pick_deps((entry: dict[str, object])) -> list[str]:
+
+def parse_clang_scan_deps((raw: str)) -> dict[str, list[str]]:
+
+
+# File: /Users/adam/Developer/vcs3/github.twardoch/pub/uz/uzcy/src/uzcy/cli.py
+# Language: python
+
+from pathlib import Path
+import fire
+from loguru import logger
+from rich.console import Console
+from uzcy.clang_backend import find_compile_db, parse_clang_scan_deps, run_clang_scan_deps
+from uzcy.config import C_EXTENSIONS, DEFAULT_EXCLUDES, UzcyConfig
+from uzcy.discovery import discover_files
+from uzcy.maps import build_forward_from_clang, invert_forward_map
+from uzcy.paths import abs_path, relative_posix
+from uzcy.text_scan import build_text_forward_map
+from uzcy.writer import update_file
+
+CONSOLE = =
+
+def _setup_logging((verbose: bool)) -> None:
+
+def _parse_excludes((exclude: str | None)) -> list[str]:
+
+def _resolve_compile_db((config: UzcyConfig, root: Path)) -> Path | None:
+
+def _run_clang_backend((files: list[Path], compile_db: Path)) -> dict[Path, list[Path]]:
+
+def _run_text_backend((files: list[Path])) -> dict[Path, list[Path]]:
+
+def _select_forward_map((
+    config: UzcyConfig, files: list[Path], root: Path
+)) -> dict[Path, list[Path]]:
+
+def _format_used_by((used_by: list[Path], root: Path)) -> list[str]:
+
+def _build_config((
+    path: str,
+    compile_db: str | None,
+    mode: str,
+    exclude: str | None,
+    dry_run: bool,
+    backup: str | None,
+    verbose: bool,
+)) -> UzcyConfig:
+
+def _run_with_config((config: UzcyConfig)) -> None:
+
+def run((
+    path: str = ".",
+    compile_db: str | None = None,
+    mode: str = "auto",
+    exclude: str | None = None,
+    dry_run: bool = False,
+    backup: str | None = None,
+    verbose: bool = False,
+)) -> None:
+
+def main(()) -> None:
+
+
+# File: /Users/adam/Developer/vcs3/github.twardoch/pub/uz/uzcy/src/uzcy/config.py
+# Language: python
+
+from pathlib import Path
+from pydantic import BaseModel, Field, field_validator
+
+DEFAULT_EXCLUDES = =
+C_EXTENSIONS = =
+
+class UzcyConfig(B, a, s, e, M, o, d, e, l):
+
+def validate_mode((cls, value: str)) -> str:
+
+
+# File: /Users/adam/Developer/vcs3/github.twardoch/pub/uz/uzcy/src/uzcy/discovery.py
+# Language: python
+
+import os
+from pathlib import Path
+from uzcy.paths import relative_posix
+
+def is_excluded((path: Path, root: Path, patterns: list[str])) -> bool:
+
+def _filter_dirs((root: Path, dirpath: Path, dirnames: list[str], patterns: list[str])) -> None:
+
+def discover_files((root: Path, patterns: list[str], extensions: list[str])) -> list[Path]:
+
+
+# File: /Users/adam/Developer/vcs3/github.twardoch/pub/uz/uzcy/src/uzcy/maps.py
+# Language: python
+
+from pathlib import Path
+from uzcy.paths import abs_path
+
+def _file_lookup((files: list[Path])) -> dict[Path, Path]:
+
+def build_forward_from_clang((
+    raw_map: dict[str, list[str]],
+    files: list[Path],
+)) -> dict[Path, list[Path]]:
+
+def invert_forward_map((forward: dict[Path, list[Path]])) -> dict[Path, list[Path]]:
+
+
+# File: /Users/adam/Developer/vcs3/github.twardoch/pub/uz/uzcy/src/uzcy/paths.py
+# Language: python
+
+from pathlib import Path
+
+def abs_path((path: Path)) -> Path:
+
+def relative_posix((path: Path, root: Path)) -> str:
+
+
+# File: /Users/adam/Developer/vcs3/github.twardoch/pub/uz/uzcy/src/uzcy/text_scan.py
+# Language: python
+
+import re
+from pathlib import Path
+from loguru import logger
+
+INCLUDE_RE = =
+
+def _strip_block_comment((line: str, in_block: bool)) -> tuple[str, bool]:
+
+def _strip_line_comment((line: str)) -> str:
+
+def scan_includes((text: str)) -> list[str]:
+
+def scan_includes_from_file((path: Path)) -> list[str]:
+
+def resolve_include((include: str, files: list[Path])) -> list[Path]:
+
+def build_text_forward_map((files: list[Path])) -> dict[Path, list[Path]]:
+
+
+# File: /Users/adam/Developer/vcs3/github.twardoch/pub/uz/uzcy/src/uzcy/writer.py
+# Language: python
+
+import tempfile
+from pathlib import Path
+from loguru import logger
+from uzcy.paths import relative_posix
+
+def detect_newline((data: bytes)) -> str:
+
+def read_text((path: Path)) -> tuple[str, str, bool]:
+
+def format_used_by_block((paths: list[str])) -> list[str]:
+
+def find_block((lines: list[str])) -> tuple[int, int] | None:
+
+def _skip_leading_blank((lines: list[str])) -> int:
+
+def _skip_blank_from((lines: list[str], index: int)) -> int:
+
+def find_insert_index((lines: list[str])) -> int:
+
+def _ensure_gap((block_lines: list[str], next_line: str | None)) -> list[str]:
+
+def apply_block((lines: list[str], block_lines: list[str] | None)) -> list[str]:
+
+def write_atomic((path: Path, text: str)) -> None:
+
+def write_backup((path: Path, root: Path, backup_dir: Path)) -> None:
+
+def update_file((
+    path: Path,
+    used_by: list[str],
+    dry_run: bool,
+    backup_dir: Path | None,
+    root: Path,
+)) -> bool:
+
+
+<document index="9">
+<source>src/uzcy.egg-info/PKG-INFO</source>
+<document_content>
+Metadata-Version: 2.4
+Name: uzcy
+Version: 0.1.0
+Summary: Reverse include dependency tracker for C/C++ (used_by blocks).
+Author: Adam Twardoch
+License: MIT
+Requires-Python: >=3.12
+Description-Content-Type: text/markdown
+Requires-Dist: fire>=0.6.0
+Requires-Dist: loguru>=0.7.2
+Requires-Dist: pydantic>=2.7.0
+Requires-Dist: rich>=13.7.0
+Provides-Extra: dev
+Requires-Dist: pytest>=8.2.0; extra == "dev"
+Requires-Dist: ruff>=0.5.0; extra == "dev"
+
+# uzcy
+
+Reverse include dependency tracker for C/C++ that maintains `// <used_by>` blocks.
+
+## Definition
+
+A file is listed under `used_by` when it **directly includes** the file (no transitive analysis).
+
+## Requirements
+
+- Python 3.12+
+- Optional: `clang-scan-deps` for the clang backend (recommended when `compile_commands.json` exists)
+
+## Install (dev)
+
+```bash
+cd uzcy
+uv venv
+source .venv/bin/activate
+uv pip install -e .
+```
+
+## Usage
+
+```bash
+uzcy run --path .
+```
+
+Key flags:
+
+- `--mode auto|clang|text` (default: auto)
+- `--compile-db path/to/compile_commands.json`
+- `--exclude ".git,build,out"` (empty string disables excludes)
+- `--dry-run`
+- `--backup path/to/backup`
+- `--verbose`
+
+## Output format
+
+```
+// <used_by>
+// - path/to/user.cpp
+// - path/to/user.h
+// </used_by>
+```
+
+## Notes
+
+- In `auto` mode, `clang-scan-deps` is used when a compile database is found; otherwise it falls back to a text scan.
+- The text scanner ignores commented `#include` lines and skips ambiguous includes when multiple files match.
+</document_content>
+</document>
+
+<document index="10">
+<source>src/uzcy.egg-info/SOURCES.txt</source>
+<document_content>
+README.md
+pyproject.toml
+src/uzcy/__init__.py
+src/uzcy/clang_backend.py
+src/uzcy/cli.py
+src/uzcy/config.py
+src/uzcy/discovery.py
+src/uzcy/maps.py
+src/uzcy/paths.py
+src/uzcy/text_scan.py
+src/uzcy/writer.py
+src/uzcy.egg-info/PKG-INFO
+src/uzcy.egg-info/SOURCES.txt
+src/uzcy.egg-info/dependency_links.txt
+src/uzcy.egg-info/entry_points.txt
+src/uzcy.egg-info/requires.txt
+src/uzcy.egg-info/top_level.txt
+tests/test_clang_backend.py
+tests/test_cli.py
+tests/test_config.py
+tests/test_discovery.py
+tests/test_maps.py
+tests/test_paths.py
+tests/test_text_scan.py
+tests/test_writer.py
+</document_content>
+</document>
+
+<document index="11">
+<source>src/uzcy.egg-info/dependency_links.txt</source>
+<document_content>
+
+</document_content>
+</document>
+
+<document index="12">
+<source>src/uzcy.egg-info/entry_points.txt</source>
+<document_content>
+[console_scripts]
+uzcy = uzcy.cli:main
+</document_content>
+</document>
+
+<document index="13">
+<source>src/uzcy.egg-info/requires.txt</source>
+<document_content>
+fire>=0.6.0
+loguru>=0.7.2
+pydantic>=2.7.0
+rich>=13.7.0
+
+[dev]
+pytest>=8.2.0
+ruff>=0.5.0
+</document_content>
+</document>
+
+<document index="14">
+<source>src/uzcy.egg-info/top_level.txt</source>
+<document_content>
+uzcy
+</document_content>
+</document>
+
+<document index="15">
+<source>test.sh</source>
+<document_content>
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT=$(cd "$(dirname "$0")" && pwd)
+cd "$ROOT"
+
+uv run --extra dev ruff check --fix .
+uv run --extra dev ruff format .
+uv run --extra dev pytest -xvs
+</document_content>
+</document>
+
+# File: /Users/adam/Developer/vcs3/github.twardoch/pub/uz/uzcy/tests/conftest.py
+# Language: python
+
+import sys
+from pathlib import Path
+
+ROOT = =
+SRC = =
+
+
+# File: /Users/adam/Developer/vcs3/github.twardoch/pub/uz/uzcy/tests/test_clang_backend.py
+# Language: python
+
+from pathlib import Path
+import pytest
+from uzcy import clang_backend
+
+class Result:
+
+class Result:
+
+def test_find_compile_db_when_direct_exists_then_returns((tmp_path: Path)) -> None:
+
+def test_find_compile_db_when_nested_then_returns((tmp_path: Path)) -> None:
+
+def test_ensure_clang_scan_deps_when_missing_then_raises((monkeypatch: pytest.MonkeyPatch)) -> None:
+
+def test_ensure_clang_scan_deps_when_found_then_returns((monkeypatch: pytest.MonkeyPatch)) -> None:
+
+def test_run_clang_scan_deps_when_success_then_returns_stdout((
+    monkeypatch: pytest.MonkeyPatch,
+)) -> None:
+
+def fake_run((*_args: object, **_kwargs: object)) -> object:
+
+def test_run_clang_scan_deps_when_failure_then_raises((monkeypatch: pytest.MonkeyPatch)) -> None:
+
+def fake_run((*_args: object, **_kwargs: object)) -> object:
+
+def test_decode_json_stream_when_multiple_objects_then_returns_list(()) -> None:
+
+def test_load_json_when_invalid_json_then_stream_decode(()) -> None:
+
+def test_normalize_entries_when_translation_units_then_returns_list(()) -> None:
+
+def test_extract_paths_when_mixed_entries_then_returns_strings(()) -> None:
+
+def test_pick_deps_when_direct_deps_present_then_returns(()) -> None:
+
+def test_pick_deps_when_direct_missing_then_fallback(()) -> None:
+
+def test_parse_clang_scan_deps_when_valid_then_returns_map(()) -> None:
+
+
+# File: /Users/adam/Developer/vcs3/github.twardoch/pub/uz/uzcy/tests/test_cli.py
+# Language: python
+
+from pathlib import Path
+import shutil
+import pytest
+from uzcy import cli
+from uzcy.config import DEFAULT_EXCLUDES, UzcyConfig
+
+def test_setup_logging_when_called_then_no_error(()) -> None:
+
+def test_parse_excludes_when_none_then_defaults(()) -> None:
+
+def test_parse_excludes_when_empty_then_empty_list(()) -> None:
+
+def test_parse_excludes_when_values_then_split(()) -> None:
+
+def test_resolve_compile_db_when_config_has_path_then_returns_abs((tmp_path: Path)) -> None:
+
+def test_resolve_compile_db_when_none_then_finds((tmp_path: Path)) -> None:
+
+def test_run_clang_backend_when_parsers_then_returns_forward((
+    monkeypatch: pytest.MonkeyPatch,
+)) -> None:
+
+def test_run_text_backend_when_called_then_returns_forward((monkeypatch: pytest.MonkeyPatch)) -> None:
+
+def test_select_forward_map_when_mode_text_then_uses_text((monkeypatch: pytest.MonkeyPatch)) -> None:
+
+def test_select_forward_map_when_mode_clang_missing_db_then_raises((tmp_path: Path)) -> None:
+
+def test_select_forward_map_when_auto_with_db_then_clang((monkeypatch: pytest.MonkeyPatch)) -> None:
+
+def test_select_forward_map_when_clang_fails_then_fallback((monkeypatch: pytest.MonkeyPatch)) -> None:
+
+def test_format_used_by_when_paths_then_relative((tmp_path: Path)) -> None:
+
+def test_build_config_when_values_then_sets_fields((tmp_path: Path)) -> None:
+
+def test_run_with_config_when_files_then_updates((tmp_path: Path)) -> None:
+
+def test_run_when_called_then_passes_config((
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+)) -> None:
+
+def fake_run((config: UzcyConfig)) -> None:
+
+def test_main_when_called_then_invokes_fire((monkeypatch: pytest.MonkeyPatch)) -> None:
+
+def fake_fire((arg: object)) -> None:
+
+def test_run_when_examples_then_matches_expected((tmp_path: Path)) -> None:
+
+
+# File: /Users/adam/Developer/vcs3/github.twardoch/pub/uz/uzcy/tests/test_config.py
+# Language: python
+
+import pytest
+from uzcy.config import DEFAULT_EXCLUDES, UzcyConfig
+
+def test_uzcy_config_when_default_then_has_default_excludes(()) -> None:
+
+def test_uzcy_config_when_invalid_mode_then_raises(()) -> None:
+
+
+# File: /Users/adam/Developer/vcs3/github.twardoch/pub/uz/uzcy/tests/test_discovery.py
+# Language: python
+
+from pathlib import Path
+from uzcy.discovery import _filter_dirs, discover_files, is_excluded
+
+def test_is_excluded_when_pattern_in_parts_then_true((tmp_path: Path)) -> None:
+
+def test_is_excluded_when_glob_matches_then_true((tmp_path: Path)) -> None:
+
+def test_is_excluded_when_no_match_then_false((tmp_path: Path)) -> None:
+
+def test_filter_dirs_when_excluded_then_removed((tmp_path: Path)) -> None:
+
+def test_discover_files_when_empty_then_returns_empty((tmp_path: Path)) -> None:
+
+def test_discover_files_when_extensions_and_excludes_then_filters((tmp_path: Path)) -> None:
+
+
+# File: /Users/adam/Developer/vcs3/github.twardoch/pub/uz/uzcy/tests/test_maps.py
+# Language: python
+
+from pathlib import Path
+from uzcy.maps import _file_lookup, build_forward_from_clang, invert_forward_map
+
+def test_file_lookup_when_paths_then_returns_abs_mapping((tmp_path: Path)) -> None:
+
+def test_build_forward_from_clang_when_known_files_then_filters((tmp_path: Path)) -> None:
+
+def test_invert_forward_map_when_deps_then_reverse_sorted((tmp_path: Path)) -> None:
+
+
+# File: /Users/adam/Developer/vcs3/github.twardoch/pub/uz/uzcy/tests/test_paths.py
+# Language: python
+
+from pathlib import Path
+from uzcy.paths import abs_path, relative_posix
+
+def test_abs_path_when_relative_then_resolves(()) -> None:
+
+def test_abs_path_when_absolute_then_preserves_location((tmp_path: Path)) -> None:
+
+def test_relative_posix_when_under_root_then_returns_relative((tmp_path: Path)) -> None:
+
+def test_relative_posix_when_outside_root_then_returns_absolute((tmp_path: Path)) -> None:
+
+
+# File: /Users/adam/Developer/vcs3/github.twardoch/pub/uz/uzcy/tests/test_text_scan.py
+# Language: python
+
+from pathlib import Path
+from uzcy.text_scan import (
+    _strip_block_comment,
+    _strip_line_comment,
+    build_text_forward_map,
+    resolve_include,
+    scan_includes,
+    scan_includes_from_file,
+)
+
+def test_strip_block_comment_when_in_block_then_returns_after_end(()) -> None:
+
+def test_strip_block_comment_when_no_end_then_returns_empty(()) -> None:
+
+def test_strip_line_comment_when_present_then_returns_prefix(()) -> None:
+
+def test_scan_includes_when_comments_then_ignores(()) -> None:
+
+def test_scan_includes_when_empty_then_returns_empty(()) -> None:
+
+def test_scan_includes_from_file_when_file_then_reads((tmp_path: Path)) -> None:
+
+def test_resolve_include_when_suffix_matches_then_returns_match((tmp_path: Path)) -> None:
+
+def test_resolve_include_when_basename_matches_then_returns_match((tmp_path: Path)) -> None:
+
+def test_build_text_forward_map_when_ambiguous_then_skips((tmp_path: Path)) -> None:
+
+
+# File: /Users/adam/Developer/vcs3/github.twardoch/pub/uz/uzcy/tests/test_writer.py
+# Language: python
+
+from pathlib import Path
+from uzcy.writer import (
+    apply_block,
+    detect_newline,
+    find_block,
+    find_insert_index,
+    format_used_by_block,
+    read_text,
+    update_file,
+    write_atomic,
+    write_backup,
+)
+
+def test_detect_newline_when_crlf_then_returns_crlf(()) -> None:
+
+def test_detect_newline_when_lf_then_returns_lf(()) -> None:
+
+def test_read_text_when_trailing_newline_then_true((tmp_path: Path)) -> None:
+
+def test_read_text_when_no_trailing_newline_then_false((tmp_path: Path)) -> None:
+
+def test_format_used_by_block_when_paths_then_formats(()) -> None:
+
+def test_find_block_when_present_then_returns_indices(()) -> None:
+
+def test_find_block_when_missing_then_none(()) -> None:
+
+def test_find_insert_index_when_line_banner_then_after_banner(()) -> None:
+
+def test_find_insert_index_when_block_banner_then_after_banner(()) -> None:
+
+def test_apply_block_when_insert_then_adds_block(()) -> None:
+
+def test_apply_block_when_replace_then_updates_block(()) -> None:
+
+def test_apply_block_when_remove_then_deletes_block(()) -> None:
+
+def test_write_atomic_when_called_then_writes((tmp_path: Path)) -> None:
+
+def test_write_backup_when_called_then_creates_copy((tmp_path: Path)) -> None:
+
+def test_update_file_when_dry_run_then_no_write((tmp_path: Path)) -> None:
+
+def test_update_file_when_no_change_then_false((tmp_path: Path)) -> None:
+
+def test_update_file_when_crlf_then_preserves_newlines((tmp_path: Path)) -> None:
+
+
+</documents>
