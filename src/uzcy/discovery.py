@@ -1,3 +1,4 @@
+# this_file: src/uzcy/discovery.py
 """File discovery for C/C++ sources."""
 
 from __future__ import annotations

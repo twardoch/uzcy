@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from pathlib import Path
 import shutil
+from pathlib import Path
 
 import pytest
 
@@ -66,36 +66,36 @@ def test_run_text_backend_when_called_then_returns_forward(monkeypatch: pytest.M
 
 def test_select_forward_map_when_mode_text_then_uses_text(monkeypatch: pytest.MonkeyPatch) -> None:
     sentinel = {Path("a.c"): []}
-    config = UzcyConfig(path=Path("."), mode="text", exclude=[])
+    config = UzcyConfig(path=Path(), mode="text", exclude=[])
     monkeypatch.setattr(cli, "_run_text_backend", lambda _files: sentinel)
-    result = cli._select_forward_map(config, [Path("a.c")], Path("."))
+    result = cli._select_forward_map(config, [Path("a.c")], Path())
     assert result == sentinel, "Text mode should use text backend"
 
 
 def test_select_forward_map_when_mode_clang_missing_db_then_raises(tmp_path: Path) -> None:
     config = UzcyConfig(path=tmp_path, mode="clang", exclude=[])
-    with pytest.raises(FileNotFoundError, match="compile_commands.json not found"):
+    with pytest.raises(FileNotFoundError, match=r"compile_commands\.json not found"):
         cli._select_forward_map(config, [], tmp_path)
 
 
 def test_select_forward_map_when_auto_with_db_then_clang(monkeypatch: pytest.MonkeyPatch) -> None:
     sentinel = {Path("a.c"): []}
-    config = UzcyConfig(path=Path("."), mode="auto", exclude=[])
+    config = UzcyConfig(path=Path(), mode="auto", exclude=[])
     monkeypatch.setattr(cli, "_resolve_compile_db", lambda _c, _r: Path("db"))
     monkeypatch.setattr(cli, "_run_clang_backend", lambda _files, _db: sentinel)
-    result = cli._select_forward_map(config, [Path("a.c")], Path("."))
+    result = cli._select_forward_map(config, [Path("a.c")], Path())
     assert result == sentinel, "Auto mode should use clang when available"
 
 
 def test_select_forward_map_when_clang_fails_then_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
     sentinel = {Path("a.c"): []}
-    config = UzcyConfig(path=Path("."), mode="auto", exclude=[])
+    config = UzcyConfig(path=Path(), mode="auto", exclude=[])
     monkeypatch.setattr(cli, "_resolve_compile_db", lambda _c, _r: Path("db"))
     monkeypatch.setattr(
         cli, "_run_clang_backend", lambda _files, _db: (_ for _ in ()).throw(RuntimeError("boom"))
     )
     monkeypatch.setattr(cli, "_run_text_backend", lambda _files: sentinel)
-    result = cli._select_forward_map(config, [Path("a.c")], Path("."))
+    result = cli._select_forward_map(config, [Path("a.c")], Path())
     assert result == sentinel, "Auto mode should fall back to text on error"
 
 

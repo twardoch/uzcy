@@ -1,4 +1,10 @@
-"""Dependency map helpers."""
+# this_file: src/uzcy/maps.py
+"""Dependency map helpers.
+
+A *forward* map answers "what does this file include?"; the *reverse* map
+(what `used_by` blocks show) answers "who includes this file?". The reverse map
+is just the forward map with its edges flipped.
+"""
 
 from __future__ import annotations
 

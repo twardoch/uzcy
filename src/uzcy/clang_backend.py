@@ -1,4 +1,13 @@
-"""clang-scan-deps integration."""
+# this_file: src/uzcy/clang_backend.py
+"""clang-scan-deps integration.
+
+The accurate backend: it drives the real preprocessor through
+``clang-scan-deps``, so every include resolves exactly as the compiler sees it.
+The catch is the price of admission -- a ``compile_commands.json`` and the
+``clang-scan-deps`` binary on PATH. When either is missing, callers fall back
+to the text scanner. Output shape varies across clang versions, so the parsers
+below accept several key names rather than one.
+"""
 
 from __future__ import annotations
 
@@ -60,8 +69,8 @@ def _normalize_entries(data: object) -> list[dict[str, object]]:
     if isinstance(data, list):
         return [item for item in data if isinstance(item, dict)]
     if isinstance(data, dict):
-        if "translation-units" in data:
-            items = data.get("translation-units")
+        items = data.get("translation-units")
+        if isinstance(items, list):
             return [item for item in items if isinstance(item, dict)]
         return [data]
     return []

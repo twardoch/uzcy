@@ -1,0 +1,19 @@
+title: uzcy
+description: Reverse include dependency tracker for C/C++ that maintains // <used_by> blocks.
+remote_theme: just-the-docs/just-the-docs
+url: https://twardoch.github.io
+baseurl: /uzcy
+
+aux_links:
+  GitHub: https://github.com/twardoch/uzcy
+  PyPI: https://pypi.org/project/uzcy/
+
+color_scheme: light
+search_enabled: true
+
+plugins:
+  - jekyll-remote-theme
+
+exclude:
+  - Gemfile
+  - Gemfile.lock

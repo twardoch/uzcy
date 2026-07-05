@@ -1,3 +1,4 @@
+# this_file: src/uzcy/cli.py
 """CLI entrypoint for uzcy."""
 
 from __future__ import annotations
@@ -59,6 +60,9 @@ def _select_forward_map(
         if not compile_db:
             raise FileNotFoundError("compile_commands.json not found")
         return _run_clang_backend(files, compile_db)
+    # auto mode: prefer the accurate clang backend when a compile database is
+    # present, but never fail the run over it -- drop to the text scanner if
+    # clang is missing or errors out.
     if compile_db:
         try:
             return _run_clang_backend(files, compile_db)

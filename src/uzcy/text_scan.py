@@ -1,4 +1,12 @@
-"""Text-based include scanning fallback."""
+# this_file: src/uzcy/text_scan.py
+"""Text-based include scanning fallback.
+
+This backend reads ``#include`` lines directly instead of asking a compiler.
+It needs no ``compile_commands.json``, so it works anywhere, but it cannot
+resolve includes the way a preprocessor would: it matches by path suffix or
+basename and skips any include that matches more than one known file. Trade
+accuracy for reach — use the clang backend when a compile database exists.
+"""
 
 from __future__ import annotations
 

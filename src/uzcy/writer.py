@@ -1,4 +1,11 @@
-"""Safe, idempotent used_by block updates."""
+# this_file: src/uzcy/writer.py
+"""Safe, idempotent used_by block updates.
+
+Runs are idempotent: a file already carrying the right block is left untouched,
+and writes go through a temp file plus atomic replace so an interrupted run
+never truncates a source file. Original line endings and trailing newline are
+preserved.
+"""
 
 from __future__ import annotations
 
@@ -77,7 +84,7 @@ def find_insert_index(lines: list[str]) -> int:
 def _ensure_gap(block_lines: list[str], next_line: str | None) -> list[str]:
     if next_line is None or next_line.strip() == "":
         return block_lines
-    return block_lines + [""]
+    return [*block_lines, ""]
 
 
 def apply_block(lines: list[str], block_lines: list[str] | None) -> list[str]:

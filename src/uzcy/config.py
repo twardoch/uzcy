@@ -1,3 +1,4 @@
+# this_file: src/uzcy/config.py
 """Configuration models and defaults."""
 
 from __future__ import annotations

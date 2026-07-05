@@ -6,4 +6,5 @@ cd "$ROOT"
 
 uv run --extra dev ruff check --fix .
 uv run --extra dev ruff format .
-uv run --extra dev pytest -xvs
+uv run --extra dev mypy
+uv run --extra test pytest --cov=src/uzcy --cov-report=term-missing

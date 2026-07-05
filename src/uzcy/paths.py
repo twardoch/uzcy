@@ -1,3 +1,4 @@
+# this_file: src/uzcy/paths.py
 """Path utilities for consistent output."""
 
 from __future__ import annotations
